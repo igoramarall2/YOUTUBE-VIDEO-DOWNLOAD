@@ -76,37 +76,36 @@ class App(customtkinter.CTk):
             self.video_box_frame.insert(text=f"Downloading: {yt.title}\n", index="0.0")
             # self.video_box_frame.get("0.0", "end")
 
-            video_title = yt.title.replace("/", "_")
-            video_title2 = yt.title.replace("|", "_")
+            video_title = yt.title.replace("/", "_").replace("|", "_")
 
-            print(f"Downloading: {video_title2}")
+            print(f"Downloading: {video_title}")
 
             # yt.streams.get_highest_resolution().download(path_file) #versao para maior resolucao
 
             temp_video = yt.streams.filter(res="1080p", progressive=False)
             temp_video.first().download(
-                output_path=path_file, filename=f"{video_title2}.mp4"
+                output_path=path_file, filename=f"{video_title}.mp4"
             )
             temp_audio = yt.streams.get_audio_only()
             temp_audio.download(
-                output_path=path_file, filename=f"mp3 {video_title2}.mp4"
+                output_path=path_file, filename=f"mp3 {video_title}.mp4"
             )
             # https://www.youtube.com/watch?v=uEJ-Rnm2yOE
 
-            print(f"{path_file}{video_title2}.mp4")
-            print(f"{path_file}mp3 {video_title2}.mp4")
+            print(f"{path_file}{video_title}.mp4")
+            print(f"{path_file}mp3 {video_title}.mp4")
 
             os.rename(
-                f"{path_file}{video_title2}.mp4",
-                f"{path_file}{video_title2} video_temp.mp4",
+                f"{path_file}{video_title}.mp4",
+                f"{path_file}{video_title} video_temp.mp4",
             )
             os.rename(
-                f"{path_file}mp3 {video_title2}.mp4",
-                f"{path_file}{video_title2} audio_temp.mp4",
+                f"{path_file}mp3 {video_title}.mp4",
+                f"{path_file}{video_title} audio_temp.mp4",
             )
 
-            video_input = ffmpeg.input(f"{path_file}{video_title2} video_temp.mp4")
-            audio_input = ffmpeg.input(f"{path_file}{video_title2} audio_temp.mp4")
+            video_input = ffmpeg.input(f"{path_file}{video_title} video_temp.mp4")
+            audio_input = ffmpeg.input(f"{path_file}{video_title} audio_temp.mp4")
 
             print(video_input)
             print(audio_input)
@@ -116,13 +115,13 @@ class App(customtkinter.CTk):
                 audio_input,
                 v=1,
                 a=1,
-            ).output(f"{path_file}1080p {video_title2}.mp4", vcodec="libx265").run()
+            ).output(f"{path_file}1080p {video_title}.mp4", vcodec="libx265").run()
 
-            os.remove(f"{path_file}{video_title2} video_temp.mp4")
-            os.remove(f"{path_file}{video_title2} audio_temp.mp4")
+            os.remove(f"{path_file}{video_title} video_temp.mp4")
+            os.remove(f"{path_file}{video_title} audio_temp.mp4")
 
             os.rename(
-                f"{path_file}1080p {video_title2}.mp4", f"{path_file}{video_title2}.mp4"
+                f"{path_file}1080p {video_title}.mp4", f"{path_file}{video_title}.mp4"
             )
 
             self.video_box_frame.insert(text=f"Downloaded: {yt.title}\n", index="end")
@@ -171,7 +170,9 @@ class App(customtkinter.CTk):
                 print("###" * 30)
                 for i in playlist.videos:
                     print(f"Downloading: {i.title}")
-                    self.url_lista_playlists.insert(text=f"Downloading: {i.title}\n")
+                    self.url_lista_playlists.insert(
+                        text=f"Downloading: {i.title}\n", index="end"
+                    )
                     self.url_lista_playlists.get("0.0", "end")
                     i.streams.get_highest_resolution().download(
                         output_path=path_file + "\\" + folder_name
