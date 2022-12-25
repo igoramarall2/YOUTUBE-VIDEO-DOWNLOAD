@@ -1,9 +1,10 @@
 import customtkinter
 import os
+import ffmpeg
 import threading
 from PIL import Image
 import youtube_dl
-import tkinter as ttk
+import tkinter
 import tkinter.messagebox
 import customtkinter as ctk
 from pytube import Playlist
@@ -14,7 +15,7 @@ from tkinter import filedialog
 
 
 class App(customtkinter.CTk):
-    def __init__(self):
+    def __init__(self):  # sourcery skip: avoid-builtin-shadow
         super().__init__()
 
         self.title("Pytuber Downloder")
@@ -65,34 +66,85 @@ class App(customtkinter.CTk):
 
         def videos():
             url_video = url_var.get()
-            filename = filedialog.askdirectory(
+            filedir = filedialog.askdirectory(
                 initialdir="/",
                 title="SELECIONE O LOCAL DE DOWNLOAD",
             )
-            print(filename)
-            path_file = filename
+            print(filedir)
+            path_file = filedir
             yt = YouTube(url_video)
             self.video_box_frame.insert(text=f"Downloading: {yt.title}\n", index="0.0")
-            self.video_box_frame.get("0.0", "end")
-            print(f"Downloading: {yt.title}")
-            yt.streams.get_highest_resolution().download(path_file)
+            # self.video_box_frame.get("0.0", "end")
+
+            video_title = yt.title.replace("/", "_")
+            video_title2 = yt.title.replace("|", "_")
+
+            print(f"Downloading: {video_title2}")
+
+            # yt.streams.get_highest_resolution().download(path_file) #versao para maior resolucao
+
+            temp_video = yt.streams.filter(res="1080p", progressive=False)
+            temp_video.first().download(
+                output_path=path_file, filename=f"{video_title2}.mp4"
+            )
+            temp_audio = yt.streams.get_audio_only()
+            temp_audio.download(
+                output_path=path_file, filename=f"mp3 {video_title2}.mp4"
+            )
+            # https://www.youtube.com/watch?v=uEJ-Rnm2yOE
+
+            print(f"{path_file}{video_title2}.mp4")
+            print(f"{path_file}mp3 {video_title2}.mp4")
+
+            os.rename(
+                f"{path_file}{video_title2}.mp4",
+                f"{path_file}{video_title2} video_temp.mp4",
+            )
+            os.rename(
+                f"{path_file}mp3 {video_title2}.mp4",
+                f"{path_file}{video_title2} audio_temp.mp4",
+            )
+
+            video_input = ffmpeg.input(f"{path_file}{video_title2} video_temp.mp4")
+            audio_input = ffmpeg.input(f"{path_file}{video_title2} audio_temp.mp4")
+
+            print(video_input)
+            print(audio_input)
+
+            ffmpeg.concat(
+                video_input,
+                audio_input,
+                v=1,
+                a=1,
+            ).output(f"{path_file}1080p {video_title2}.mp4", vcodec="libx265").run()
+
+            os.remove(f"{path_file}{video_title2} video_temp.mp4")
+            os.remove(f"{path_file}{video_title2} audio_temp.mp4")
+
+            os.rename(
+                f"{path_file}1080p {video_title2}.mp4", f"{path_file}{video_title2}.mp4"
+            )
+
+            self.video_box_frame.insert(text=f"Downloaded: {yt.title}\n", index="end")
+            # self.video_box_frame.get("0.0", "end")
+            print("Done")
 
         def playlist():
             url_playlist = url_var.get()
             p = Playlist(url_playlist)
-            filename = filedialog.askdirectory(
+            filedir = filedialog.askdirectory(
                 initialdir="/",
                 title="SELECIONE O LOCAL DE DOWNLOAD",
             )
-            print(filename)
-            path_file = filename
+            print(filedir)
+            path_file = filedir
             folder_name = str(p.title)
             print(f"Downloading Playlist: {p.title}")
             print("#" * 60)
             for video in p.videos:
                 print(f"Downloading: {video.title}")
                 self.playlist_textbox.insert(text=f"Downloading: {video.title}\n")
-                self.playlist_textbox.get("0.0", "end")
+                self.playlist_textbox.get("end")
 
                 video.streams.get_highest_resolution().download(
                     output_path=path_file + "\\" + folder_name
@@ -104,12 +156,12 @@ class App(customtkinter.CTk):
             url_playlist = str(url_var.get())
             lista_playlists.extend(url_playlist.split(","))
             print(lista_playlists)
-            filename = filedialog.askdirectory(
+            filedir = filedialog.askdirectory(
                 initialdir="/",
                 title="SELECIONE O LOCAL DE DOWNLOAD",
             )
-            print(filename)
-            path_file = filename
+            print(filedir)
+            path_file = filedir
             for p in lista_playlists:
                 url = p
                 playlist = Playlist(url)
@@ -130,12 +182,12 @@ class App(customtkinter.CTk):
 
         def audio_only():
             url_playlist = url_var.get()
-            filename = filedialog.askdirectory(
+            filedir = filedialog.askdirectory(
                 initialdir="/",
                 title="SELECIONE O LOCAL DE DOWNLOAD",
             )
-            print(filename)
-            path_file = filename
+            print(filedir)
+            path_file = filedir
             video_url = url_playlist
             video_info = youtube_dl.YoutubeDL().extract_info(
                 url=video_url, download=False
@@ -289,6 +341,7 @@ class App(customtkinter.CTk):
         self.video_box_frame.grid(
             row=1, column=0, padx=(20, 20), pady=(5, 5), sticky="nsew"
         )
+        # self.video_box_frame.configure(state="disabled")
 
         self.label_1 = ctk.CTkLabel(self.video_download)
         self.label_1.place(relx=0.5, rely=0.5, anchor=tkinter.E)
