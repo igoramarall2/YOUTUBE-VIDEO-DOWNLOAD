@@ -24,12 +24,7 @@ class App(customtkinter.CTk):
         # set grid layout 1x2
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
-        # Setting icon of master window
-        photo = tkinter.PhotoImage(
-            # file=r"C:\Users\igora\AppData\Local\Programs\Python\Python311\Lib\site-packages\customtkinter\icon.png"
-            file=r"D:\Python\YOUTUBE VIDEO DOWNLOAD\icon.png"
-        )
-        self.wm_iconphoto(False, photo)
+
         url_var = tkinter.StringVar()
 
         def optionmenu_callback(quality):
@@ -70,7 +65,7 @@ class App(customtkinter.CTk):
                 initialdir="/",
                 title="SELECIONE O LOCAL DE DOWNLOAD",
             )
-            print(filedir)
+            print(f"Sera baixado aqui: {filedir}")
             path_file = filedir
             yt = YouTube(url_video)
             self.video_box_frame.insert(text=f"Downloading: {yt.title}\n", index="0.0")
@@ -79,55 +74,54 @@ class App(customtkinter.CTk):
             video_title = yt.title.replace("/", "_").replace("|", "_")
 
             print(f"Downloading: {video_title}")
+            #todo : condicoes para filtrar res="1080" e fps
+            temp_video = yt.streams.filter()
+            print(temp_video)
+            
+            if not temp_video:
+                yt.streams.get_highest_resolution().download(path_file) #versao para maior resolucao
 
-            # yt.streams.get_highest_resolution().download(path_file) #versao para maior resolucao
+            else:
+                temp_video.first().download(
+                    output_path=path_file, filename=f"{video_title}.mp4"
+                    )
+                temp_audio = yt.streams.get_audio_only()
+                temp_audio.download(
+                    output_path=path_file, filename=f"mp3 {video_title}.mp4"
+                )
+                os.rename(
+                    os.path.join(path_file, f"{video_title}.mp4"),
+                    os.path.join(path_file, f"{video_title} video_temp.mp4")
+                    )
+                os.rename(
+                    os.path.join(path_file, f"mp3 {video_title}.mp4"),
+                    os.path.join(path_file, f"mp3 {video_title} audio_temp.mp4")
+                )
 
-            temp_video = yt.streams.filter(res="1080p", progressive=False)
-            temp_video.first().download(
-                output_path=path_file, filename=f"{video_title}.mp4"
-            )
-            temp_audio = yt.streams.get_audio_only()
-            temp_audio.download(
-                output_path=path_file, filename=f"mp3 {video_title}.mp4"
-            )
-            # https://www.youtube.com/watch?v=uEJ-Rnm2yOE
+                video_input = ffmpeg.input(os.path.join(path_file, f"{video_title} video_temp.mp4"))
+                audio_input = ffmpeg.input(os.path.join(path_file, f"mp3 {video_title} audio_temp.mp4"))
 
-            print(f"{path_file}{video_title}.mp4")
-            print(f"{path_file}mp3 {video_title}.mp4")
+                print(video_input)
+                print(audio_input)
 
-            os.rename(
-                f"{path_file}{video_title}.mp4",
-                f"{path_file}{video_title} video_temp.mp4",
-            )
-            os.rename(
-                f"{path_file}mp3 {video_title}.mp4",
-                f"{path_file}{video_title} audio_temp.mp4",
-            )
+                ffmpeg.concat(
+                    video_input,
+                    audio_input,
+                    v=1,
+                    a=1,
+                ).output(os.path.join(path_file, f"{video_title}.mp4"), vcodec="libx265").run()
 
-            video_input = ffmpeg.input(f"{path_file}{video_title} video_temp.mp4")
-            audio_input = ffmpeg.input(f"{path_file}{video_title} audio_temp.mp4")
+                os.remove(os.path.join(path_file, f"{video_title} video_temp.mp4"))
+                os.remove(os.path.join(path_file, f"mp3 {video_title} audio_temp.mp4"))
 
-            print(video_input)
-            print(audio_input)
+                os.rename(
+                    f"{path_file}1080p {video_title}.mp4", f"{path_file}{video_title}.mp4"
+                )
 
-            ffmpeg.concat(
-                video_input,
-                audio_input,
-                v=1,
-                a=1,
-            ).output(f"{path_file}1080p {video_title}.mp4", vcodec="libx265").run()
-
-            os.remove(f"{path_file}{video_title} video_temp.mp4")
-            os.remove(f"{path_file}{video_title} audio_temp.mp4")
-
-            os.rename(
-                f"{path_file}1080p {video_title}.mp4", f"{path_file}{video_title}.mp4"
-            )
-
-            self.video_box_frame.insert(text=f"Downloaded: {yt.title}\n", index="end")
-            # self.video_box_frame.get("0.0", "end")
-            print("Done")
-
+                self.video_box_frame.insert(text=f"Downloaded: {yt.title}\n", index="end")
+                self.video_box_frame.get("0.0", "end")
+                print("Done")                
+        
         def playlist():
             url_playlist = url_var.get()
             p = Playlist(url_playlist)
@@ -146,7 +140,7 @@ class App(customtkinter.CTk):
                 self.playlist_textbox.get("end")
 
                 video.streams.get_highest_resolution().download(
-                    output_path=path_file + "\\" + folder_name
+                    output_path=os.path.join(path_file, folder_name)
                 )
                 print("-" * 60)
 
@@ -178,7 +172,7 @@ class App(customtkinter.CTk):
                         output_path=path_file + "\\" + folder_name
                     )
                     print(
-                        "----------------------------------------------------------------"
+                        "-----------------------------------------------------"
                     )
 
         def audio_only():
@@ -215,7 +209,7 @@ class App(customtkinter.CTk):
         # load images with light and dark mode image
         image_path = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            r"D:\Python\YOUTUBE VIDEO DOWNLOAD\test\manual_integration_tests\test_images",
+            r"test/manual_integration_tests/test_images",
         )
         self.logo_image = customtkinter.CTkImage(
             Image.open(os.path.join(image_path, "icon.png")),
